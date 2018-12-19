@@ -41,8 +41,18 @@ def get_event_date(target):
     raw_date = soup.find('td', {'valign': 'top'}).get_text(strip=False)
     raw_date = raw_date.replace(u'\xa0', u' ')
     raw_date = raw_date.split('(')[0]
-    fmt = 'Date/Time: %A, %B %d, %Y '
-    return datetime.strptime(raw_date, fmt).date()
+    raw_date = raw_date.strip()
+
+    # not all of the dates follow this format!
+    # format things like Date/Time: Saturday, January 02, 2016 ', '12:00  PM - 2:00  PM)
+    fmt_normal = 'Date/Time: %A, %B %d, %Y'
+    try:
+        return datetime.strptime(raw_date, fmt_normal).date()
+    except ValueError:
+        pass
+
+    fmt_short = 'Date/Time: %A, %b. %d, %Y'
+    return datetime.strptime(raw_date, fmt_short).date()
 
 def parse_lifter(row):
     """
