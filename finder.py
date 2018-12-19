@@ -55,6 +55,46 @@ def parse_lifter(row):
     }
 
 
+def parse_lifts(row):
+    """
+    Given a line like:
+
+    'Weight Class:|69 Kg|Total:|123|Competition Weight:|68.2|Snatch 1:|53|Snatch 2:|-55|Snatch 3:|55|Best Snatch:|55|CleanJerk 1:|68|CleanJerk 2:|-71|CleanJerk 3:|-72|Best CleanJerk:|68'
+
+    return a dictionary like
+
+    {
+    'weight_class': '69',
+    'total': 123,
+    'competition_weight': 68.2,
+    'snatch1': 53,
+    'snatch2': -55,
+    'snatch3': 55,
+    'best_snatch': 55,
+    'cj1': 68,
+    'cj2': -71,
+    'cj3': -72,
+    'best_cj': 68
+    }
+
+    """
+    result = row.split('|')
+    return {
+        'weight_class': result[1],
+        'total': result[3],
+        'competition_weight': result[5],
+        'snatch1': result[7],
+        'snatch2': result[9],
+        'snatch3': result[11],
+        'best_snatch': result[13],
+        'cj1': result[15],
+        'cj2': result[17],
+        'cj3': result[19],
+        'best_cj': result[21]
+    }
+
+
+
 def parse(body):
     # format is a table with 2 rows devoted to a given athelete
     soup = BeautifulSoup(body, features="html.parser")
@@ -63,7 +103,7 @@ def parse(body):
 
     meet = {
         'name': None,
-        'lifts': []
+        'results': []
     }
 
     lifter = None
@@ -85,39 +125,24 @@ def parse(body):
             # smallinfo rowon the style for the lifts
             # titlerow is for the weightclass
 
-            lifter_line = row.find('td', {'valign': 'top'})
-            if lifter_line is not None:
+            lifter_row = row.find('td', {'valign': 'top'})
+            if lifter_row is not None:
                 lifter = parse_lifter(row)
-                print(lifter)
 
-    # pagetitlerow = Meetname
-    # first row is the athelete name
-    # second row is the result from the meet
-    # <table cellpadding="1" class="list_table">
-    # <tr class="pagetitlerow"><td colspan="4"><b>2016 SENSE Gym Weigthlifting Meet #1</b></td></tr>
-    # <tr class="headerrow"><th> </th><th>Participant</th><th>Hometown</th><th>Result</th></tr>
-    # <tr class="titlerow"><td colspan="4">63 Kg</td></tr>
-    # <tr class="rowon">
-    # <td> </td>
-    # <td valign="top"> Jenny Ting</td>
-    # <td>Long Beach, CA</td>
-    # <td>147</td>
-    # </tr>
-    # <tr class="smallinfo rowon"><td> </td><td colspan="3"><b>Weight Class:</b> 63 Kg   <b>Total:</b> 147   <br/><b>Competition Weight:</b> 60   <b>Snatch 1:</b> 60   <b>Snatch 2:</b> 62   <b>Snatch 3:</b> 65   <b>Best Snatch:</b> 65   <b>CleanJerk 1:</b> 78   <b>CleanJerk 2:</b> 82   <b>CleanJerk 3:</b> -85   <b>Best CleanJerk:</b> 82   </td></tr>
-    # <tr class="rowoff">
-    # <td> </td>
-    # <td valign="top"> Julie Quach</td>
-    # <td>Garden Grove, CA</td>
-    # <td>0</td>
-    # </tr>
-    # <tr class="smallinfo rowoff"><td> </td><td colspan="3"><b>Weight Class:</b> 63 Kg   <b>Total:</b> 0   <br/><b>Competition Weight:</b> 62.9   <b>Snatch 1:</b> -58   <b>Snatch 2:</b> -60   <b>Snatch 3:</b> -60   <b>Best Snatch:</b> 0   <b>CleanJerk 1:</b> -70   <b>CleanJerk 2:</b> 70   <b>CleanJerk 3:</b> 74   <b>Best CleanJerk:</b> 74   </td></tr>
-
+            lifts_or_header = row.get_text('|', strip=True)
+            if "Weight Class" in lifts_or_header:
+                lifts = parse_lifts(lifts_or_header)
+                lifter['lifts'] = lifts
+                meet['results'].append(lifter)
+                lifter = None
+    return meet
 
 def main():
     event_links = get_local_event_list()
     for event in event_links[0:1]:
         raw_results = get_event(event)
         parsed = parse(raw_results)
+        pprint.pprint(parsed)
 
 
 if __name__ == '__main__':
