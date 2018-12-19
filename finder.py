@@ -1,5 +1,6 @@
 import requests
 from bs4 import BeautifulSoup
+from datetime import datetime
 import pprint
 
 # this has all of the events that we can use to grab all of the reults
@@ -34,10 +35,14 @@ def get_event_results(target):
     return response.content
 
 def get_event_date(target):
-    response = requests.get(f"{target}&isPopup=&Tab=Results")
+    response = requests.get(target)
     soup = BeautifulSoup(response.content, features="html.parser")
-    table = soup.find("table", {"class": "reportable"})
-
+    # let's just grab the first datetime with this. This will contain some trash
+    raw_date = soup.find('td', {'valign': 'top'}).get_text(strip=False)
+    raw_date = raw_date.replace(u'\xa0', u' ')
+    raw_date = raw_date.split('(')[0]
+    fmt = 'Date/Time: %A, %B %d, %Y '
+    return datetime.strptime(raw_date, fmt).date()
 
 def parse_lifter(row):
     """
@@ -146,10 +151,11 @@ def parse(event_url, body):
 def main():
     event_links = get_local_event_list()
     for event in event_links[0:1]:
-        #event_date = get_event_date(event)
-        raw_results = get_event_results(event)
-        parsed = parse(event, raw_results)
-        pprint.pprint(parsed)
+        event_date = get_event_date(event)
+        print(event_date)
+        # raw_results = get_event_results(event)
+        # parsed = parse(event, raw_results)
+        # pprint.pprint(parsed)
 
 
 if __name__ == '__main__':
