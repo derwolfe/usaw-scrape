@@ -38,18 +38,17 @@ def parse(body):
     # format is a table with 2 rows devoted to a given athelete
     soup = BeautifulSoup(body, features="html.parser")
     table = soup.find("table", {"class": "list_table"})
-    rows = table.find_all("td")
-
-    rownum = 1
-    import pdb; pdb.set_trace()
+    rows = table.find_all("tr")
+    rownum = 0
     for row in rows:
 
         # assume that the first row is the title of the meet
-        if rownum == 1:
-            continue
+        if rownum == 0:
+            name = rows[0].find('td').get_text()  # we should still strip this
+            print(name)
 
         # assume the second row is table info, we don't care about it
-        elif rownum == 2:
+        elif rownum == 1:
             continue
 
         else:
