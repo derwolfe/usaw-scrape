@@ -34,6 +34,27 @@ def get_event(target):
     return response.content
 
 
+def parse_lifter(row):
+    """
+    Given something like the followig from beautiful soup
+
+    <tr class="rowoff">
+       <td> </td>
+       <td valign="top"> Jeremy Winn</td>
+       <td>Signal Hill, CA</td>
+       <td>185</td>
+    </tr>
+
+    return a dict of {'name': 'Jeremy Winn', 'from': 'Signal Hill, CA', 'result': 185}
+    """
+    sepd = row.get_text('|', strip=True).split('|')
+    return {
+        'name': sepd[0],
+        'from': sepd[1],
+        'result': sepd[2]
+    }
+
+
 def parse(body):
     # format is a table with 2 rows devoted to a given athelete
     soup = BeautifulSoup(body, features="html.parser")
@@ -58,12 +79,16 @@ def parse(body):
         elif ct > 1:
             # we have to get the lifter name and city in the row, then the
             # following row has the rest of the info for lifts
-            import pdb; pdb.set_trace()
-            lifter_line = row.find('td', {'valign': 'top'})
+            # import pdb; pdb.set_trace()
 
+            # rowon is a style for the lifter empty, name, home, result. These are TDs
+            # smallinfo rowon the style for the lifts
+            # titlerow is for the weightclass
+
+            lifter_line = row.find('td', {'valign': 'top'})
             if lifter_line is not None:
-                lifter_name = lifter_line.get_text(strip=True)
-                lifter = {'name': lifter_name}
+                lifter = parse_lifter(row)
+                print(lifter)
 
     # pagetitlerow = Meetname
     # first row is the athelete name
