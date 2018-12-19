@@ -39,22 +39,24 @@ def parse(body):
     soup = BeautifulSoup(body, features="html.parser")
     table = soup.find("table", {"class": "list_table"})
     rows = table.find_all("tr")
-    rownum = 0
-    for row in rows:
+
+    meet = {}
+    for ct, row in enumerate(rows):
 
         # assume that the first row is the title of the meet
-        if rownum == 0:
-            name = rows[0].find('td').get_text()  # we should still strip this
-            print(name)
+        if ct == 0:
+            name = row.find('td').get_text()
+            meet['name'] = name
 
         # assume the second row is table info, we don't care about it
-        elif rownum == 1:
-            continue
+        # parse the lifts!
+        elif ct > 1:
 
-        else:
-            pass
-        # let's bump this
-        rownum =+ 1
+            import pdb; pdb.set_trace()
+            lifter_line = row.find('td', {'class': 'valign'})
+            if lifter_line is not None:
+                lifter_name = lifter_line.get_text()
+
 
     # pagetitlerow = Meetname
     # first row is the athelete name
@@ -77,7 +79,6 @@ def parse(body):
     # <td>0</td>
     # </tr>
     # <tr class="smallinfo rowoff"><td> </td><td colspan="3"><b>Weight Class:</b> 63 Kg   <b>Total:</b> 0   <br/><b>Competition Weight:</b> 62.9   <b>Snatch 1:</b> -58   <b>Snatch 2:</b> -60   <b>Snatch 3:</b> -60   <b>Best Snatch:</b> 0   <b>CleanJerk 1:</b> -70   <b>CleanJerk 2:</b> 70   <b>CleanJerk 3:</b> 74   <b>Best CleanJerk:</b> 74   </td></tr>
-    import pdb; pdb.set_trace()
 
 
 def main():
