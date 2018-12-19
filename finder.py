@@ -40,7 +40,12 @@ def parse(body):
     table = soup.find("table", {"class": "list_table"})
     rows = table.find_all("tr")
 
-    meet = {}
+    meet = {
+        'name': None,
+        'lifts': []
+    }
+
+    lifter = None
     for ct, row in enumerate(rows):
 
         # assume that the first row is the title of the meet
@@ -51,12 +56,14 @@ def parse(body):
         # assume the second row is table info, we don't care about it
         # parse the lifts!
         elif ct > 1:
-
+            # we have to get the lifter name and city in the row, then the
+            # following row has the rest of the info for lifts
             import pdb; pdb.set_trace()
-            lifter_line = row.find('td', {'class': 'valign'})
-            if lifter_line is not None:
-                lifter_name = lifter_line.get_text()
+            lifter_line = row.find('td', {'valign': 'top'})
 
+            if lifter_line is not None:
+                lifter_name = lifter_line.get_text(strip=True)
+                lifter = {'name': lifter_name}
 
     # pagetitlerow = Meetname
     # first row is the athelete name
