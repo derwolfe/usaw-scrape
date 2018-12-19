@@ -162,10 +162,10 @@ def main():
     event_links = get_local_event_list()
     for event in event_links[0:1]:
         event_date = get_event_date(event)
-        print(event_date)
-        # raw_results = get_event_results(event)
-        # parsed = parse(event, raw_results)
-        # pprint.pprint(parsed)
+        raw_results = get_event_results(event)
+        parsed = parse(event, raw_results)
+        parsed['date'] = event_date
+        pprint.pprint(parsed)
 
 
 if __name__ == '__main__':
