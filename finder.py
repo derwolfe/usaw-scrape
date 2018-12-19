@@ -5,11 +5,12 @@ import pprint
 
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
-meet_list = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 
+local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
+national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
 # we need to fill the hidden form
-form = {
+form_local = {
     "evt_State": "CA",
     "evt_ActiveDateFrom": "1/01/2016",
     "evt_ActiveDateTo": "12/17/2018",
@@ -18,7 +19,17 @@ form = {
     "evt_CategoryID": "12"
 }
 
-def get_local_event_list():
+form_national = {
+    "evt_State": None,
+    "evt_ActiveDateFrom": "1/01/2016",
+    "evt_ActiveDateTo": "12/17/2018",
+    "RF": "ST",
+    "FRM": None,
+    "evt_CategoryID": "13"
+}
+
+
+def get_event_list(meet_list, form):
     """
     Get the links for all of the events in the given time period
     """
@@ -33,6 +44,7 @@ def get_event_results(target):
     # results are tagged with &isPopup=&Tab=Results
     response = requests.get(f"{target}&isPopup=&Tab=Results")
     return response.content
+
 
 def get_event_date(target):
     response = requests.get(target)
@@ -53,6 +65,7 @@ def get_event_date(target):
 
     fmt_short = 'Date/Time: %A, %b. %d, %Y'
     return datetime.strptime(raw_date, fmt_short).date()
+
 
 def parse_lifter(row):
     """
@@ -140,8 +153,6 @@ def parse(event_url, body):
         elif ct > 1:
             # we have to get the lifter name and city in the row, then the
             # following row has the rest of the info for lifts
-            # import pdb; pdb.set_trace()
-
             # rowon is a style for the lifter empty, name, home, result. These are TDs
             # smallinfo rowon the style for the lifts
             # titlerow is for the weightclass
@@ -158,8 +169,10 @@ def parse(event_url, body):
                 lifter = None
     return meet
 
+
 def main():
-    event_links = get_local_event_list()
+    event_links = get_event_list(local_meets, form_local)
+    event_links.extend(get_event_list(national_meets, form_national))
     for event in event_links[0:1]:
         event_date = get_event_date(event)
         raw_results = get_event_results(event)
