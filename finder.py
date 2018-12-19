@@ -4,7 +4,7 @@ import pprint
 
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
-meet_list = f"{base}/wp15/Events2/Events.wp?evt_CategoryID=12"
+meet_list = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 
 
 # we need to fill the hidden form
@@ -24,14 +24,19 @@ def get_local_event_list():
     response = requests.post(meet_list, form)
     soup = BeautifulSoup(response.content, features="html.parser")
     events = soup.findAll("a", {"class": "tinybutton"})
-    links = ["{}/{}".format(base, e["href"]) for e in events]
+    links = ["{}{}".format(base, e["href"]) for e in events]
     return links
 
 
-def get_event(target):
+def get_event_results(target):
     # results are tagged with &isPopup=&Tab=Results
     response = requests.get(f"{target}&isPopup=&Tab=Results")
     return response.content
+
+def get_event_date(target):
+    response = requests.get(f"{target}&isPopup=&Tab=Results")
+    soup = BeautifulSoup(response.content, features="html.parser")
+    table = soup.find("table", {"class": "reportable"})
 
 
 def parse_lifter(row):
@@ -95,13 +100,14 @@ def parse_lifts(row):
 
 
 
-def parse(body):
+def parse(event_url, body):
     # format is a table with 2 rows devoted to a given athelete
     soup = BeautifulSoup(body, features="html.parser")
     table = soup.find("table", {"class": "list_table"})
     rows = table.find_all("tr")
 
     meet = {
+        'event_url': event_url,
         'name': None,
         'results': []
     }
@@ -140,8 +146,9 @@ def parse(body):
 def main():
     event_links = get_local_event_list()
     for event in event_links[0:1]:
-        raw_results = get_event(event)
-        parsed = parse(raw_results)
+        #event_date = get_event_date(event)
+        raw_results = get_event_results(event)
+        parsed = parse(event, raw_results)
         pprint.pprint(parsed)
 
 
