@@ -3,6 +3,7 @@ from bs4 import BeautifulSoup
 from datetime import datetime
 import pprint
 import sqlite3
+from urllib.parse import urljoin
 
 
 # this has all of the events that we can use to grab all of the reults
@@ -38,7 +39,7 @@ def get_event_list(meet_list, form):
     response = requests.post(meet_list, form)
     soup = BeautifulSoup(response.content, features="html.parser")
     events = soup.findAll("a", {"class": "tinybutton"})
-    links = ["{}{}".format(base, e["href"]) for e in events]
+    links = [urljoin(base, e["href"]) for e in events]
     return links
 
 
@@ -59,14 +60,19 @@ def get_event_date(target):
 
     # not all of the dates follow this format!
     # format things like Date/Time: Saturday, January 02, 2016 ', '12:00  PM - 2:00  PM)
-    fmt_normal = 'Date/Time: %A, %B %d, %Y'
-    try:
-        return datetime.strptime(raw_date, fmt_normal).date()
-    except ValueError:
-        pass
 
-    fmt_short = 'Date/Time: %A, %b. %d, %Y'
-    return datetime.strptime(raw_date, fmt_short).date()
+    fmt_normal = 'Date/Time: %A, %B %d, %Y'
+    fmt_shorter = 'Date/Time: %A, %b. %d, %Y'
+    for fmtr in [fmt_normal, fmt_shorter]:
+        try:
+            return datetime.strptime(raw_date, fmtr).date()
+        except ValueError:
+            pass
+
+    # if this hasn't worked, we need to parse a date like
+    fmt = 'Date/Time: %m/%d/%Y '
+    raw_date = raw_date.split('-')[0]
+    return datetime.strptime(raw_date, fmt).date()
 
 
 def parse_lifter(row):
@@ -214,17 +220,25 @@ def insert_meet(conn, meet):
     c.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
     conn.commit()
 
+def exists(conn, event_url):
+    c = conn.cursor()
+    res = c.execute("SELECT EXISTS (SELECT 1 FROM results WHERE url=?)", (event_url,))
+    return res.fetchone() == (1,)
+
 def main():
     conn = build_db()
     event_links = get_event_list(local_meets, form_local)
     event_links.extend(get_event_list(national_meets, form_national))
     for event in event_links:
         print(f'Event url: {event}')
-        event_date = get_event_date(event)
-        raw_results = get_event_results(event)
-        parsed = parse(event, raw_results)
-        parsed['date'] = event_date
-        insert_meet(conn, parsed)
+        if exists(conn, event):
+            print('already in DB')
+        else:
+            event_date = get_event_date(event)
+            raw_results = get_event_results(event)
+            parsed = parse(event, raw_results)
+            parsed['date'] = event_date
+            insert_meet(conn, parsed)
 
 
 if __name__ == '__main__':
