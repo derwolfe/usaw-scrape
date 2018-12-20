@@ -2,6 +2,8 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime
 import pprint
+import sqlite3
+
 
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
@@ -120,9 +122,9 @@ def parse_lifts(row):
         'weight_class': result[1],
         'total': result[3],
         'competition_weight': result[5],
-        'snatch1': result[7],
-        'snatch2': result[9],
-        'snatch3': result[11],
+        'sn1': result[7],
+        'sn2': result[9],
+        'sn3': result[11],
         'best_snatch': result[13],
         'cj1': result[15],
         'cj2': result[17],
@@ -174,15 +176,51 @@ def parse(event_url, body):
     return meet
 
 
+def build_db():
+    conn = sqlite3.connect('lifts.db')
+    c = conn.cursor()
+    c.execute("""CREATE TABLE IF NOT EXISTS results
+                 (date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)""")
+    conn.commit()
+    return conn
+
+def insert_meet(conn, meet):
+    c = conn.cursor()
+    rows = []
+    for lifter in meet['results']:
+        lifts = lifter['lifts']
+        rows.append(
+            (
+                meet['date'],
+                meet['name'],
+                lifter['name'],
+                lifts['weight_class'],
+                lifter['from'],
+                lifts['cj1'],
+                lifts['cj2'],
+                lifts['cj3'],
+                lifts['sn1'],
+                lifts['sn2'],
+                lifts['sn3'],
+                lifts['total'],
+                meet['event_url'],
+            )
+        )
+
+    c.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+    conn.commit()
+
 def main():
-    event_links = get_event_list(local_meets, form_local)
+    conn = build_db()
+    # event_links = get_event_list(local_meets, form_local)
+    event_links = []
     event_links.extend(get_event_list(national_meets, form_national))
     for event in event_links[0:1]:
         event_date = get_event_date(event)
         raw_results = get_event_results(event)
         parsed = parse(event, raw_results)
         parsed['date'] = event_date
-        pprint.pprint(parsed)
+        insert_meet(conn, parsed)
 
 
 if __name__ == '__main__':
