@@ -118,20 +118,22 @@ def parse_lifts(row):
 
     """
     result = row.split('|')
-    return {
-        'weight_class': result[1],
-        'total': result[3],
-        'competition_weight': result[5],
-        'sn1': result[7],
-        'sn2': result[9],
-        'sn3': result[11],
-        'best_snatch': result[13],
-        'cj1': result[15],
-        'cj2': result[17],
-        'cj3': result[19],
-        'best_cj': result[21]
-    }
-
+    try:
+        return {
+            'weight_class': result[1],
+            'total': result[3],
+            'competition_weight': result[5],
+            'sn1': result[7],
+            'sn2': result[9],
+            'sn3': result[11],
+            'best_snatch': result[13],
+            'cj1': result[15],
+            'cj2': result[17],
+            'cj3': result[19],
+            'best_cj': result[21]
+        }
+    except IndexError:
+        print(f"Bad row: {row}")
 
 
 def parse(event_url, body):
@@ -171,7 +173,9 @@ def parse(event_url, body):
             if "Weight Class" in lifts_or_header:
                 lifts = parse_lifts(lifts_or_header)
                 lifter['lifts'] = lifts
-                meet['results'].append(lifter)
+                # we could fail parsing, if so, don't add
+                if lifts is not None:
+                    meet['results'].append(lifter)
                 lifter = None
     return meet
 
@@ -212,10 +216,10 @@ def insert_meet(conn, meet):
 
 def main():
     conn = build_db()
-    # event_links = get_event_list(local_meets, form_local)
-    event_links = []
+    event_links = get_event_list(local_meets, form_local)
     event_links.extend(get_event_list(national_meets, form_national))
-    for event in event_links[0:1]:
+    for event in event_links:
+        print(f'Event url: {event}')
         event_date = get_event_date(event)
         raw_results = get_event_results(event)
         parsed = parse(event, raw_results)
