@@ -81,11 +81,15 @@ def parse_lifter(row):
     return a dict of {'name': 'Jeremy Winn', 'from': 'Signal Hill, CA', 'result': 185}
     """
     sepd = row.get_text('|', strip=True).split('|')
-    return {
-        'name': sepd[0],
-        'from': sepd[1],
-        'result': sepd[2]
-    }
+    try:
+        return {
+            'name': sepd[0],
+            'from': sepd[1],
+        }
+    except IndexError:
+        print(f"Failure with row: {row}\n {sepd}")
+        raise
+
 
 
 def parse_lifts(row):
