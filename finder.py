@@ -155,12 +155,12 @@ def parse(event_url, body):
     }
 
     lifter = None
+    meet['name'] = soup.find('tr', {'class': 'pagetitlerow'}).get_text(strip=True)
     for ct, row in enumerate(rows):
 
         # assume that the first row is the title of the meet
         if ct == 0:
-            name = row.find('td').get_text()
-            meet['name'] = name
+            pass
 
         # assume the second row is table info, we don't care about it
         # parse the lifts!
