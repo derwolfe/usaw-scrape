@@ -168,7 +168,7 @@ def parse(event_url, body):
                 lifter = parse_lifter(row)
 
             lifts_or_header = row.get_text("|", strip=True)
-            if "Weight Class" in lifts_or_header:
+            if "Weight Class:" in lifts_or_header:
                 lifts = parse_lifts(lifts_or_header)
                 lifter["lifts"] = lifts
                 # we could fail parsing, if so, don't add
