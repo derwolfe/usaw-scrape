@@ -17,7 +17,7 @@ def local_form(state):
     return {
         "evt_State": state,
         "evt_ActiveDateFrom": "1/01/2016",
-        "evt_ActiveDateTo": "12/17/2018",
+        "evt_ActiveDateTo": "1/19/2019",
         "RF": "ST",
         "FRM": None,
         "evt_CategoryID": "12",
