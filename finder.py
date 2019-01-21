@@ -4,7 +4,7 @@ from datetime import datetime
 import pprint
 import sqlite3
 from urllib.parse import urljoin
-
+from hashlib import blake2b
 
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
@@ -13,14 +13,15 @@ local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
 # we need to fill the hidden form
-form_local = {
-    "evt_State": "CA",
-    "evt_ActiveDateFrom": "1/01/2016",
-    "evt_ActiveDateTo": "12/17/2018",
-    "RF": "ST",
-    "FRM": None,
-    "evt_CategoryID": "12"
-}
+def local_form(state):
+    return {
+        "evt_State": state,
+        "evt_ActiveDateFrom": "1/01/2016",
+        "evt_ActiveDateTo": "12/17/2018",
+        "RF": "ST",
+        "FRM": None,
+        "evt_CategoryID": "12"
+    }
 
 form_national = {
     "evt_State": None,
@@ -32,7 +33,7 @@ form_national = {
 }
 
 
-def get_event_list(meet_list, form):
+def get_event_list(meet_list, form, state=None):
     """
     Get the links for all of the events in the given time period
     """
@@ -99,29 +100,26 @@ def parse_lifter(row):
         raise
 
 
-
 def parse_lifts(row):
     """
     Given a line like:
 
     'Weight Class:|69 Kg|Total:|123|Competition Weight:|68.2|Snatch 1:|53|Snatch 2:|-55|Snatch 3:|55|Best Snatch:|55|CleanJerk 1:|68|CleanJerk 2:|-71|CleanJerk 3:|-72|Best CleanJerk:|68'
 
-    return a dictionary like
-
+    return a dictionary like:
     {
-    'weight_class': '69',
-    'total': 123,
-    'competition_weight': 68.2,
-    'snatch1': 53,
-    'snatch2': -55,
-    'snatch3': 55,
-    'best_snatch': 55,
-    'cj1': 68,
-    'cj2': -71,
-    'cj3': -72,
-    'best_cj': 68
+        'weight_class': '69',
+        'total': 123,
+        'competition_weight': 68.2,
+        'snatch1': 53,
+        'snatch2': -55,
+        'snatch3': 55,
+        'best_snatch': 55,
+        'cj1': 68,
+        'cj2': -71,
+        'cj3': -72,
+        'best_cj': 68
     }
-
     """
     result = row.split('|')
     try:
@@ -190,34 +188,94 @@ def build_db():
     conn = sqlite3.connect('lifts.db')
     c = conn.cursor()
     c.execute("""CREATE TABLE IF NOT EXISTS results
-                 (date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)""")
+                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)""")
     conn.commit()
     return conn
+
+class Row:
+    def __init__(self, date, event_name, lifter_name, weight_class, \
+                home, cj1, cj2, cj3, sn1, sn2, sn3, total, event_url):
+        self.id = None
+        self.date = date
+        self.event_name = event_name
+        self.lifter_name = lifter_name
+        self.weight_class = weight_class
+        self.home = home
+        self.cj1 = cj1
+        self.cj2 = cj2
+        self.cj3 = cj3
+        self.sn1 = sn1
+        self.sn2 = sn2
+        self.sn3 = sn3
+        self.total = total
+        self.event_url = event_url
+        self._build_id()
+
+    def _build_id(self):
+        h = blake2b(digest_size=20)
+
+        for attr in [
+            self.date,
+            self.event_name,
+            self.lifter_name,
+            self.weight_class,
+            self.home,
+            self.cj1,
+            self.cj2,
+            self.cj3,
+            self.sn1,
+            self.sn2,
+            self.sn3,
+            self.event_url
+        ]:
+            if attr == self.date:
+                h.update(self.date.strftime("%Y%m%d").encode('utf-8'))
+            else:
+                h.update(attr.encode('utf-8'))
+        self.id = h.hexdigest()
+
+    def to_tuple(self):
+        # this needs to match the schema when the DB is built!
+        return (
+            self.id,
+            self.date,
+            self.event_name,
+            self.lifter_name,
+            self.weight_class,
+            self.home,
+            self.cj1,
+            self.cj2,
+            self.cj3,
+            self.sn1,
+            self.sn2,
+            self.sn3,
+            self.total,
+            self.event_url
+        )
 
 def insert_meet(conn, meet):
     c = conn.cursor()
     rows = []
     for lifter in meet['results']:
         lifts = lifter['lifts']
-        rows.append(
-            (
-                meet['date'],
-                meet['name'],
-                lifter['name'],
-                lifts['weight_class'],
-                lifter['from'],
-                lifts['cj1'],
-                lifts['cj2'],
-                lifts['cj3'],
-                lifts['sn1'],
-                lifts['sn2'],
-                lifts['sn3'],
-                lifts['total'],
-                meet['event_url'],
-            )
+        row = Row(
+            meet['date'],
+            meet['name'],
+            lifter['name'],
+            lifts['weight_class'],
+            lifter['from'],
+            lifts['cj1'],
+            lifts['cj2'],
+            lifts['cj3'],
+            lifts['sn1'],
+            lifts['sn2'],
+            lifts['sn3'],
+            lifts['total'],
+            meet['event_url']
         )
+        rows.append(row.to_tuple())
 
-    c.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+    c.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
     conn.commit()
 
 def exists(conn, event_url):
@@ -227,7 +285,9 @@ def exists(conn, event_url):
 
 def main():
     conn = build_db()
-    event_links = get_event_list(local_meets, form_local)
+    event_links = []
+    for state in ['TX', 'MI', 'KS', 'CA']:
+        event_links.extend(get_event_list(local_meets, local_form(state)))
     event_links.extend(get_event_list(national_meets, form_national))
     for event in event_links:
         print(f'Event url: {event}')
