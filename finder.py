@@ -20,8 +20,9 @@ def local_form(state):
         "evt_ActiveDateTo": "12/17/2018",
         "RF": "ST",
         "FRM": None,
-        "evt_CategoryID": "12"
+        "evt_CategoryID": "12",
     }
+
 
 form_national = {
     "evt_State": None,
@@ -29,7 +30,7 @@ form_national = {
     "evt_ActiveDateTo": "12/17/2018",
     "RF": "ST",
     "FRM": None,
-    "evt_CategoryID": "13"
+    "evt_CategoryID": "13",
 }
 
 
@@ -54,16 +55,16 @@ def get_event_date(target):
     response = requests.get(target)
     soup = BeautifulSoup(response.content, features="html.parser")
     # let's just grab the first datetime with this. This will contain some trash
-    raw_date = soup.find('td', {'valign': 'top'}).get_text(strip=False)
-    raw_date = raw_date.replace(u'\xa0', u' ')
-    raw_date = raw_date.split('(')[0]
+    raw_date = soup.find("td", {"valign": "top"}).get_text(strip=False)
+    raw_date = raw_date.replace("\xa0", " ")
+    raw_date = raw_date.split("(")[0]
     raw_date = raw_date.strip()
 
     # not all of the dates follow this format!
     # format things like Date/Time: Saturday, January 02, 2016 ', '12:00  PM - 2:00  PM)
 
-    fmt_normal = 'Date/Time: %A, %B %d, %Y'
-    fmt_shorter = 'Date/Time: %A, %b. %d, %Y'
+    fmt_normal = "Date/Time: %A, %B %d, %Y"
+    fmt_shorter = "Date/Time: %A, %b. %d, %Y"
     for fmtr in [fmt_normal, fmt_shorter]:
         try:
             return datetime.strptime(raw_date, fmtr).date()
@@ -71,8 +72,8 @@ def get_event_date(target):
             pass
 
     # if this hasn't worked, we need to parse a date like
-    fmt = 'Date/Time: %m/%d/%Y '
-    raw_date = raw_date.split('-')[0]
+    fmt = "Date/Time: %m/%d/%Y "
+    raw_date = raw_date.split("-")[0]
     return datetime.strptime(raw_date, fmt).date()
 
 
@@ -89,12 +90,9 @@ def parse_lifter(row):
 
     return a dict of {'name': 'Jeremy Winn', 'from': 'Signal Hill, CA', 'result': 185}
     """
-    sepd = row.get_text('|', strip=True).split('|')
+    sepd = row.get_text("|", strip=True).split("|")
     try:
-        return {
-            'name': sepd[0],
-            'from': sepd[1],
-        }
+        return {"name": sepd[0], "from": sepd[1]}
     except IndexError:
         print(f"Failure with row: {row}\n {sepd}")
         raise
@@ -121,20 +119,20 @@ def parse_lifts(row):
         'best_cj': 68
     }
     """
-    result = row.split('|')
+    result = row.split("|")
     try:
         return {
-            'weight_class': result[1],
-            'total': result[3],
-            'competition_weight': result[5],
-            'sn1': result[7],
-            'sn2': result[9],
-            'sn3': result[11],
-            'best_snatch': result[13],
-            'cj1': result[15],
-            'cj2': result[17],
-            'cj3': result[19],
-            'best_cj': result[21]
+            "weight_class": result[1],
+            "total": result[3],
+            "competition_weight": result[5],
+            "sn1": result[7],
+            "sn2": result[9],
+            "sn3": result[11],
+            "best_snatch": result[13],
+            "cj1": result[15],
+            "cj2": result[17],
+            "cj3": result[19],
+            "best_cj": result[21],
         }
     except IndexError:
         print(f"Bad row: {row}")
@@ -146,14 +144,10 @@ def parse(event_url, body):
     table = soup.find("table", {"class": "list_table"})
     rows = table.find_all("tr")
 
-    meet = {
-        'event_url': event_url,
-        'name': None,
-        'results': []
-    }
+    meet = {"event_url": event_url, "name": None, "results": []}
 
     lifter = None
-    meet['name'] = soup.find('tr', {'class': 'pagetitlerow'}).get_text(strip=True)
+    meet["name"] = soup.find("tr", {"class": "pagetitlerow"}).get_text(strip=True)
     for ct, row in enumerate(rows):
 
         # assume that the first row is the title of the meet
@@ -169,32 +163,49 @@ def parse(event_url, body):
             # smallinfo rowon the style for the lifts
             # titlerow is for the weightclass
 
-            lifter_row = row.find('td', {'valign': 'top'})
+            lifter_row = row.find("td", {"valign": "top"})
             if lifter_row is not None:
                 lifter = parse_lifter(row)
 
-            lifts_or_header = row.get_text('|', strip=True)
+            lifts_or_header = row.get_text("|", strip=True)
             if "Weight Class" in lifts_or_header:
                 lifts = parse_lifts(lifts_or_header)
-                lifter['lifts'] = lifts
+                lifter["lifts"] = lifts
                 # we could fail parsing, if so, don't add
                 if lifts is not None:
-                    meet['results'].append(lifter)
+                    meet["results"].append(lifter)
                 lifter = None
     return meet
 
 
 def build_db():
-    conn = sqlite3.connect('lifts.db')
+    conn = sqlite3.connect("lifts.db")
     c = conn.cursor()
-    c.execute("""CREATE TABLE IF NOT EXISTS results
-                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)""")
+    c.execute(
+        """CREATE TABLE IF NOT EXISTS results
+                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)"""
+    )
     conn.commit()
     return conn
 
+
 class Row:
-    def __init__(self, date, event_name, lifter_name, weight_class, \
-                home, cj1, cj2, cj3, sn1, sn2, sn3, total, event_url):
+    def __init__(
+        self,
+        date,
+        event_name,
+        lifter_name,
+        weight_class,
+        home,
+        cj1,
+        cj2,
+        cj3,
+        sn1,
+        sn2,
+        sn3,
+        total,
+        event_url,
+    ):
         self.id = None
         self.date = date
         self.event_name = event_name
@@ -226,12 +237,12 @@ class Row:
             self.sn1,
             self.sn2,
             self.sn3,
-            self.event_url
+            self.event_url,
         ]:
             if attr == self.date:
-                h.update(self.date.strftime("%Y%m%d").encode('utf-8'))
+                h.update(self.date.strftime("%Y%m%d").encode("utf-8"))
             else:
-                h.update(attr.encode('utf-8'))
+                h.update(attr.encode("utf-8"))
         self.id = h.hexdigest()
 
     def to_tuple(self):
@@ -250,56 +261,123 @@ class Row:
             self.sn2,
             self.sn3,
             self.total,
-            self.event_url
+            self.event_url,
         )
+
 
 def insert_meet(conn, meet):
     c = conn.cursor()
     rows = []
-    for lifter in meet['results']:
-        lifts = lifter['lifts']
+    for lifter in meet["results"]:
+        lifts = lifter["lifts"]
         row = Row(
-            meet['date'],
-            meet['name'],
-            lifter['name'],
-            lifts['weight_class'],
-            lifter['from'],
-            lifts['cj1'],
-            lifts['cj2'],
-            lifts['cj3'],
-            lifts['sn1'],
-            lifts['sn2'],
-            lifts['sn3'],
-            lifts['total'],
-            meet['event_url']
+            meet["date"],
+            meet["name"],
+            lifter["name"],
+            lifts["weight_class"],
+            lifter["from"],
+            lifts["cj1"],
+            lifts["cj2"],
+            lifts["cj3"],
+            lifts["sn1"],
+            lifts["sn2"],
+            lifts["sn3"],
+            lifts["total"],
+            meet["event_url"],
         )
         rows.append(row.to_tuple())
 
-    c.executemany("INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows)
+    c.executemany(
+        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+    )
     conn.commit()
+
 
 def exists(conn, event_url):
     c = conn.cursor()
     res = c.execute("SELECT EXISTS (SELECT 1 FROM results WHERE url=?)", (event_url,))
     return res.fetchone() == (1,)
 
+
+# Get all of the states
+states = {
+    "AK": "Alaska",
+    "AL": "Alabama",
+    "AR": "Arkansas",
+    "AS": "American Samoa",
+    "AZ": "Arizona",
+    "CA": "California",
+    "CO": "Colorado",
+    "CT": "Connecticut",
+    "DC": "District of Columbia",
+    "DE": "Delaware",
+    "FL": "Florida",
+    "GA": "Georgia",
+    "GU": "Guam",
+    "HI": "Hawaii",
+    "IA": "Iowa",
+    "ID": "Idaho",
+    "IL": "Illinois",
+    "IN": "Indiana",
+    "KS": "Kansas",
+    "KY": "Kentucky",
+    "LA": "Louisiana",
+    "MA": "Massachusetts",
+    "MD": "Maryland",
+    "ME": "Maine",
+    "MI": "Michigan",
+    "MN": "Minnesota",
+    "MO": "Missouri",
+    "MP": "Northern Mariana Islands",
+    "MS": "Mississippi",
+    "MT": "Montana",
+    "NA": "National",
+    "NC": "North Carolina",
+    "ND": "North Dakota",
+    "NE": "Nebraska",
+    "NH": "New Hampshire",
+    "NJ": "New Jersey",
+    "NM": "New Mexico",
+    "NV": "Nevada",
+    "NY": "New York",
+    "OH": "Ohio",
+    "OK": "Oklahoma",
+    "OR": "Oregon",
+    "PA": "Pennsylvania",
+    "PR": "Puerto Rico",
+    "RI": "Rhode Island",
+    "SC": "South Carolina",
+    "SD": "South Dakota",
+    "TN": "Tennessee",
+    "TX": "Texas",
+    "UT": "Utah",
+    "VA": "Virginia",
+    "VI": "Virgin Islands",
+    "VT": "Vermont",
+    "WA": "Washington",
+    "WI": "Wisconsin",
+    "WV": "West Virginia",
+    "WY": "Wyoming",
+}
+
+
 def main():
     conn = build_db()
     event_links = []
-    for state in ['TX', 'MI', 'KS', 'CA']:
+    for state in states.keys():
         event_links.extend(get_event_list(local_meets, local_form(state)))
     event_links.extend(get_event_list(national_meets, form_national))
     for event in event_links:
-        print(f'Event url: {event}')
+        print(f"Event url: {event}")
         if exists(conn, event):
-            print('already in DB')
+            print("already in DB")
         else:
             event_date = get_event_date(event)
             raw_results = get_event_results(event)
             parsed = parse(event, raw_results)
-            parsed['date'] = event_date
+            parsed["date"] = event_date
             insert_meet(conn, parsed)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
