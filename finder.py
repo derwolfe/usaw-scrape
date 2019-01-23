@@ -183,7 +183,7 @@ def build_db():
     c = conn.cursor()
     c.execute(
         """CREATE TABLE IF NOT EXISTS results
-                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)"""
+                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, homestate text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)"""
     )
     conn.commit()
     return conn
@@ -206,12 +206,14 @@ class Row:
         total,
         event_url,
     ):
+        home_parts = home.split(",")
         self.id = None
         self.date = date
         self.event_name = event_name
         self.lifter_name = lifter_name
         self.weight_class = weight_class
-        self.home = home
+        self.city = ''.join(home_parts[:-1]).strip()
+        self.state = home_parts[-1].strip().lower()
         self.cj1 = cj1
         self.cj2 = cj2
         self.cj3 = cj3
@@ -230,7 +232,8 @@ class Row:
             self.event_name,
             self.lifter_name,
             self.weight_class,
-            self.home,
+            self.city,
+            self.state,
             self.cj1,
             self.cj2,
             self.cj3,
@@ -245,6 +248,7 @@ class Row:
                 h.update(attr.encode("utf-8"))
         self.id = h.hexdigest()
 
+
     def to_tuple(self):
         # this needs to match the schema when the DB is built!
         return (
@@ -253,7 +257,8 @@ class Row:
             self.event_name,
             self.lifter_name,
             self.weight_class,
-            self.home,
+            self.city,
+            self.state,
             self.cj1,
             self.cj2,
             self.cj3,
@@ -288,7 +293,7 @@ def insert_meet(conn, meet):
         rows.append(row.to_tuple())
 
     c.executemany(
-        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
     )
     conn.commit()
 
