@@ -4,7 +4,6 @@ from datetime import datetime
 import pprint
 import sqlite3
 from urllib.parse import urljoin
-from hashlib import blake2b
 
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
@@ -12,8 +11,9 @@ base = "https://webpoint.usaweightlifting.org/"
 local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
-start = "1/01/2014"
-end = "1/19/2019" 
+start = "1/01/2015"
+end = "1/26/2019"
+#end = "1/19/2019"
 
 # we need to fill the hidden form
 def local_form(state):
@@ -122,6 +122,7 @@ def parse_lifts(row):
         'best_cj': 68
     }
     """
+    # this isn't stable with the output, we need to look for words and check what follows. actually parse
     result = row.split("|")
     try:
         return {
@@ -181,13 +182,28 @@ def parse(event_url, body):
     return meet
 
 
+_schema = """
+CREATE TABLE IF NOT EXISTS results
+                 (date text
+                 , meet_name text
+                 , lifter text
+                 , weight_class real
+                 , hometown text
+                 , cj1 real
+                 , cj2 real
+                 , cj3 real
+                 , sn1 real
+                 , sn2 real
+                 , sn3 real
+                 , total real
+                 , url text
+                , UNIQUE (date, meet_name, lifter, weight_class, url) ON CONFLICT REPLACE);
+"""
+
 def build_db():
-    conn = sqlite3.connect("lifts.db")
+    conn = sqlite3.connect("lifts2.db")
     c = conn.cursor()
-    c.execute(
-        """CREATE TABLE IF NOT EXISTS results
-                 (id text, date text, meet_name text, lifter text, weight_class real, hometown text, cj1 real, cj2 real, cj3 real, sn1 real, sn2 real, sn3 real, total real, url text)"""
-    )
+    c.execute(_schema)
     conn.commit()
     return conn
 
@@ -209,7 +225,6 @@ class Row:
         total,
         event_url,
     ):
-        self.id = None
         self.date = date
         self.event_name = event_name
         self.lifter_name = lifter_name
@@ -223,35 +238,10 @@ class Row:
         self.sn3 = sn3
         self.total = total
         self.event_url = event_url
-        self._build_id()
-
-    def _build_id(self):
-        h = blake2b(digest_size=20)
-
-        for attr in [
-            self.date,
-            self.event_name,
-            self.lifter_name,
-            self.weight_class,
-            self.home,
-            self.cj1,
-            self.cj2,
-            self.cj3,
-            self.sn1,
-            self.sn2,
-            self.sn3,
-            self.event_url,
-        ]:
-            if attr == self.date:
-                h.update(self.date.strftime("%Y%m%d").encode("utf-8"))
-            else:
-                h.update(attr.encode("utf-8"))
-        self.id = h.hexdigest()
 
     def to_tuple(self):
         # this needs to match the schema when the DB is built!
         return (
-            self.id,
             self.date,
             self.event_name,
             self.lifter_name,
@@ -291,7 +281,7 @@ def insert_meet(conn, meet):
         rows.append(row.to_tuple())
 
     c.executemany(
-        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+        "INSERT INTO results VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
     )
     conn.commit()
 
