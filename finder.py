@@ -188,6 +188,7 @@ CREATE TABLE IF NOT EXISTS results
                  , meet_name text
                  , lifter text
                  , weight_class real
+                 , competition_weight real
                  , hometown text
                  , cj1 real
                  , cj2 real
@@ -268,6 +269,7 @@ def insert_meet(conn, meet):
             meet["name"],
             lifter["name"],
             lifts["weight_class"],
+            lifts["competition_weight"],
             lifter["from"],
             lifts["cj1"],
             lifts["cj2"],
@@ -281,7 +283,7 @@ def insert_meet(conn, meet):
         rows.append(row.to_tuple())
 
     c.executemany(
-        "INSERT INTO results VALUES ( ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
     )
     conn.commit()
 
