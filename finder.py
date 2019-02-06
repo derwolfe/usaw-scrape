@@ -245,6 +245,7 @@ class Row:
         event_name,
         lifter_name,
         weight_class,
+        competition_weight,
         home,
         cj1,
         cj2,
@@ -259,6 +260,7 @@ class Row:
         self.event_name = event_name
         self.lifter_name = lifter_name
         self.weight_class = weight_class
+        self.competition_weight = competition_weight
         self.home = home
         self.cj1 = cj1
         self.cj2 = cj2
@@ -276,6 +278,7 @@ class Row:
             self.event_name,
             self.lifter_name,
             self.weight_class,
+            self.competition_weight,
             self.home,
             self.cj1,
             self.cj2,
