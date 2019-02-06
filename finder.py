@@ -13,8 +13,8 @@ base = "https://webpoint.usaweightlifting.org/"
 local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
-start = "1/01/2015"
-end = "1/26/2019"
+start = "1/01/2011"
+end = "1/26/2015"
 #end = "1/19/2019"
 
 # we need to fill the hidden form
@@ -106,20 +106,20 @@ def parse_lifter(row):
 
 class UsawParser(TextParsers, whitespace=None):
     floatP = reg(r'[+-]?[0-9]*\.?[0-9]+')
-    intP = reg(r'[-+]?[0-9]+')
+
     # actual fields
-    WeightClass = "Weight Class:|" >> intP << ' Kg|' > float
+    WeightClass = "Weight Class:|" >> reg(r'[0-9]+[-+]?') << ' Kg|'
     Total = "Total:|" >> floatP << "|" > float
     CompetitionWeight = "Competition Weight:|" >> floatP << '|' > float
     snatches = reg(r'Snatch [1-3]:|') >> floatP
     Sn1 = "Snatch 1:|" >> opt(floatP << '|' > float)
     Sn2 = "Snatch 2:|" >> opt(floatP << '|' > float)
     Sn3 = "Snatch 3:|" >> opt(floatP << '|' > float)
-    BestSn = "Best Snatch:|" >> opt(floatP << '|' > float)
+    BestSn = "Best Snatch:|" >> floatP << '|' > float
     Cj1 = "CleanJerk 1:|" >> opt(floatP << '|' > float)
     Cj2 = "CleanJerk 2:|" >> opt(floatP << '|' > float)
     Cj3 = "CleanJerk 3:|" >> opt(floatP << '|' > float)
-    BestCj = "Best CleanJerk:|" >> opt(floatP > float)
+    BestCj = "Best CleanJerk:|" >> floatP > float
     value = WeightClass & Total & CompetitionWeight & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & BestCj
 
 
@@ -162,14 +162,14 @@ def parse_lifts(row):
             "sn1": get_value(value, 3),
             "sn2": get_value(value, 4),
             "sn3": get_value(value, 5),
-            "best_snatch": value[6],
+            "best_sn": value[6],
             "cj1": get_value(value, 7),
             "cj2": get_value(value, 8),
             "cj3": get_value(value, 9),
             "best_cj": value[10],
         }
     else:
-        print("Bad row: {}", Parsed)
+        print("Bad row: {}", parsed)
 
 def parse(event_url, body):
     # format is a table with 2 rows devoted to a given athelete
@@ -226,6 +226,8 @@ CREATE TABLE IF NOT EXISTS results
                  , sn2 real
                  , sn3 real
                  , total real
+                 , best_snatch real
+                 , best_cleanjerk real
                  , url text
                 , UNIQUE (date, meet_name, lifter, weight_class, url) ON CONFLICT REPLACE);
 """
@@ -254,6 +256,8 @@ class Row:
         sn2,
         sn3,
         total,
+        best_snatch,
+        best_cleanjerk,
         event_url,
     ):
         self.date = date
@@ -269,6 +273,8 @@ class Row:
         self.sn2 = sn2
         self.sn3 = sn3
         self.total = total
+        self.best_snatch = best_snatch
+        self.best_cleanjerk = best_cleanjerk
         self.event_url = event_url
 
     def to_tuple(self):
@@ -287,6 +293,8 @@ class Row:
             self.sn2,
             self.sn3,
             self.total,
+            self.best_snatch,
+            self.best_cleanjerk,
             self.event_url,
         )
 
@@ -310,12 +318,15 @@ def insert_meet(conn, meet):
             lifts["sn2"],
             lifts["sn3"],
             lifts["total"],
+            lifts["best_sn"],
+            lifts["best_cj"],
             meet["event_url"],
         )
         rows.append(row.to_tuple())
 
+    print(rows)
     c.executemany(
-        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
+        "INSERT INTO results VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", rows
     )
     conn.commit()
 
