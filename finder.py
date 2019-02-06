@@ -5,6 +5,8 @@ import pprint
 import sqlite3
 from urllib.parse import urljoin
 
+from parsita import TextParsers, reg, opt, Success, Failure
+
 # this has all of the events that we can use to grab all of the reults
 base = "https://webpoint.usaweightlifting.org/"
 
@@ -101,6 +103,26 @@ def parse_lifter(row):
         raise
 
 
+
+class UsawParser(TextParsers, whitespace=None):
+    floatP = reg(r'[+-]?[0-9]*\.?[0-9]+')
+    intP = reg(r'[-+]?[0-9]+')
+    # actual fields
+    WeightClass = "Weight Class:|" >> intP << ' Kg|' > float
+    Total = "Total:|" >> floatP << "|" > float
+    CompetitionWeight = "Competition Weight:|" >> floatP << '|' > float
+    snatches = reg(r'Snatch [1-3]:|') >> floatP
+    Sn1 = "Snatch 1:|" >> opt(floatP << '|' > float)
+    Sn2 = "Snatch 2:|" >> opt(floatP << '|' > float)
+    Sn3 = "Snatch 3:|" >> opt(floatP << '|' > float)
+    BestSn = "Best Snatch:|" >> opt(floatP << '|' > float)
+    Cj1 = "CleanJerk 1:|" >> opt(floatP << '|' > float)
+    Cj2 = "CleanJerk 2:|" >> opt(floatP << '|' > float)
+    Cj3 = "CleanJerk 3:|" >> opt(floatP << '|' > float)
+    BestCj = "Best CleanJerk:|" >> opt(floatP > float)
+    value = WeightClass & Total & CompetitionWeight & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & BestCj
+
+
 def parse_lifts(row):
     """
     Given a line like:
@@ -122,25 +144,32 @@ def parse_lifts(row):
         'best_cj': 68
     }
     """
-    # this isn't stable with the output, we need to look for words and check what follows. actually parse
-    result = row.split("|")
-    try:
-        return {
-            "weight_class": result[1],
-            "total": result[3],
-            "competition_weight": result[5],
-            "sn1": result[7],
-            "sn2": result[9],
-            "sn3": result[11],
-            "best_snatch": result[13],
-            "cj1": result[15],
-            "cj2": result[17],
-            "cj3": result[19],
-            "best_cj": result[21],
-        }
-    except IndexError:
-        print(f"Bad row: {row}")
+    # this is the original row
+    # 'Weight Class:|58 Kg|Total:|217|Competition Weight:|106.5|Snatch 1:|Snatch 2:|Snatch 3:|Best Snatch:|92.5|CleanJerk 1:|CleanJerk 2:|CleanJerk 3:|Best CleanJerk:|125'
+    def get_value(lst, idx):
+        try:
+            return lst[idx][0]
+        except IndexError:
+            return 0
 
+    parsed = UsawParser.value.parse(row)
+    if isinstance(parsed, Success):
+        value = parsed.value
+        return {
+            "weight_class": value[0],
+            "total": value[1],
+            "competition_weight": value[2],
+            "sn1": get_value(value, 3),
+            "sn2": get_value(value, 4),
+            "sn3": get_value(value, 5),
+            "best_snatch": value[6],
+            "cj1": get_value(value, 7),
+            "cj2": get_value(value, 8),
+            "cj3": get_value(value, 9),
+            "best_cj": value[10],
+        }
+    else:
+        print("Bad row: {}", Parsed)
 
 def parse(event_url, body):
     # format is a table with 2 rows devoted to a given athelete
