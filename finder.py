@@ -14,8 +14,7 @@ local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
 start = "1/01/2011"
-end = "1/26/2015"
-#end = "1/19/2019"
+end = "1/02/2015"
 
 # we need to fill the hidden form
 def local_form(state):
@@ -111,7 +110,7 @@ class UsawParser(TextParsers, whitespace=None):
     WeightClass = "Weight Class:|" >> reg(r'[0-9]+[-+]?') << ' Kg|'
     Total = "Total:|" >> floatP << "|" > float
     CompetitionWeight = "Competition Weight:|" >> floatP << '|' > float
-    snatches = reg(r'Snatch [1-3]:|') >> floatP
+    BodyWeight = "Body Weight:|" >> floatP << '|' > float
     Sn1 = "Snatch 1:|" >> opt(floatP << '|' > float)
     Sn2 = "Snatch 2:|" >> opt(floatP << '|' > float)
     Sn3 = "Snatch 3:|" >> opt(floatP << '|' > float)
@@ -120,7 +119,7 @@ class UsawParser(TextParsers, whitespace=None):
     Cj2 = "CleanJerk 2:|" >> opt(floatP << '|' > float)
     Cj3 = "CleanJerk 3:|" >> opt(floatP << '|' > float)
     BestCj = "Best CleanJerk:|" >> floatP > float
-    value = WeightClass & Total & CompetitionWeight & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & BestCj
+    value = WeightClass & Total & (CompetitionWeight | BodyWeight) & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & BestCj
 
 
 def parse_lifts(row):
