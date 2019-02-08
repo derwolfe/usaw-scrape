@@ -13,8 +13,8 @@ base = "https://webpoint.usaweightlifting.org/"
 local_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=12"
 national_meets = f"{base}wp15/Events2/Events.wp?evt_CategoryID=13"
 
-start = "1/01/2011"
-end = "1/02/2015"
+start = "11/01/2017"
+end = "2/02/2019"
 
 # we need to fill the hidden form
 def local_form(state):
