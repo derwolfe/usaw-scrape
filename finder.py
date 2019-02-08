@@ -119,7 +119,8 @@ class UsawParser(TextParsers, whitespace=None):
     Cj2 = "CleanJerk 2:|" >> opt(floatP << '|' > float)
     Cj3 = "CleanJerk 3:|" >> opt(floatP << '|' > float)
     BestCj = "Best CleanJerk:|" >> floatP > float
-    value = WeightClass & Total & (CompetitionWeight | BodyWeight) & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & BestCj
+    BestCJ1 = "Best Clean & Jerk:|" >> floatP > float
+    value = WeightClass & Total & (CompetitionWeight | BodyWeight) & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & (BestCj | BestCJ1)
 
 
 def parse_lifts(row):
