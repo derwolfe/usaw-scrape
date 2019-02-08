@@ -118,9 +118,12 @@ class UsawParser(TextParsers, whitespace=None):
     Cj1 = "CleanJerk 1:|" >> opt(floatP << '|' > float)
     Cj2 = "CleanJerk 2:|" >> opt(floatP << '|' > float)
     Cj3 = "CleanJerk 3:|" >> opt(floatP << '|' > float)
+    Cj1And = "Clean & Jerk 1:|" >> opt(floatP << '|' > float)
+    Cj2And = "Clean & Jerk 2:|" >> opt(floatP << '|' > float)
+    Cj3And = "Clean & Jerk 3:|" >> opt(floatP << '|' > float)
     BestCj = "Best CleanJerk:|" >> floatP > float
-    BestCJ1 = "Best Clean & Jerk:|" >> floatP > float
-    value = WeightClass & Total & (CompetitionWeight | BodyWeight) & Sn1 & Sn2 & Sn3 & BestSn & Cj1 & Cj2 & Cj3 & (BestCj | BestCJ1)
+    BestCJAnd = "Best Clean & Jerk:|" >> floatP > float
+    value = WeightClass & Total & (CompetitionWeight | BodyWeight) & Sn1 & Sn2 & Sn3 & BestSn & (Cj1 | Cj1And) & (Cj2 | Cj2And) & (Cj3 | Cj3And) & (BestCj | BestCJAnd)
 
 
 def parse_lifts(row):
@@ -169,7 +172,7 @@ def parse_lifts(row):
             "best_cj": value[10],
         }
     else:
-        print("Bad row: {}", parsed)
+        print("Bad row: {}".format(parsed))
 
 def parse(event_url, body):
     # format is a table with 2 rows devoted to a given athelete
